@@ -1,0 +1,66 @@
+// Mesures DAX du modèle en étoile Gold (même définitions que le pipeline).
+// A coller dans une table de mesures. Voir README.md pour les valeurs de contrôle.
+// NB : écrites pour ce modèle mais non exécutées dans Power BI à la création du projet.
+
+// ---------- Ventes ----------
+Revenue =
+CALCULATE ( SUM ( fact_orders[items_revenue] ), fact_orders[is_valid_sale] = TRUE () )
+
+Orders =
+CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[is_valid_sale] = TRUE () )
+
+Average Order Value =
+DIVIDE ( [Revenue], [Orders] )
+
+Freight =
+CALCULATE ( SUM ( fact_orders[freight_total] ), fact_orders[is_valid_sale] = TRUE () )
+
+// ---------- Clients ----------
+Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[is_valid_sale] = TRUE ()
+)
+
+Repeat Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[is_valid_sale] = TRUE (),
+    dim_customers[is_repeat_customer] = TRUE ()
+)
+
+Repeat Rate =
+DIVIDE ( [Repeat Customers], [Customers] )
+
+// ---------- Livraison et satisfaction ----------
+Avg Delivery Days =
+CALCULATE ( AVERAGE ( fact_orders[delivery_days] ), fact_orders[is_valid_sale] = TRUE () )
+
+// is_late est vide pour les commandes non livrées : IN {TRUE, FALSE} les exclut du dénominateur
+Late Rate =
+DIVIDE (
+    CALCULATE (
+        COUNTROWS ( fact_orders ),
+        fact_orders[is_valid_sale] = TRUE (),
+        fact_orders[is_late] = TRUE ()
+    ),
+    CALCULATE (
+        COUNTROWS ( fact_orders ),
+        fact_orders[is_valid_sale] = TRUE (),
+        fact_orders[is_late] IN { TRUE (), FALSE () }
+    )
+)
+
+Avg Review Score =
+CALCULATE ( AVERAGE ( fact_orders[review_score] ), fact_orders[is_valid_sale] = TRUE () )
+
+// ---------- Evolution (nécessite dim_date marquée comme table de dates) ----------
+Revenue Previous Month =
+CALCULATE ( [Revenue], DATEADD ( dim_date[date], -1, MONTH ) )
+
+Revenue MoM % =
+DIVIDE ( [Revenue] - [Revenue Previous Month], [Revenue Previous Month] )
+
+// ---------- Produits ----------
+Revenue Share of Total =
+DIVIDE ( [Revenue], CALCULATE ( [Revenue], ALL ( dim_products ) ) )

@@ -1,0 +1,59 @@
+{
+  "row_counts": {
+    "bronze": {
+      "category_translation": 71,
+      "customers": 99441,
+      "order_items": 112650,
+      "orders": 99441,
+      "payments": 103886,
+      "products": 32951,
+      "reviews": 100000,
+      "sellers": 3095
+    },
+    "silver": {
+      "customers": 99441,
+      "order_items": 112650,
+      "orders": 99441,
+      "payments": 103886,
+      "products": 32951,
+      "reviews": 99441,
+      "sellers": 3095
+    },
+    "gold": {
+      "dim_customers": 96096,
+      "dim_date": 774,
+      "dim_products": 32951,
+      "dim_sellers": 3095,
+      "fact_order_items": 112650,
+      "fact_orders": 99441,
+      "kpi_category": 74,
+      "kpi_delivery_review": 5,
+      "kpi_monthly": 24,
+      "kpi_overview": 1,
+      "kpi_payment": 5,
+      "kpi_state": 27
+    }
+  },
+  "dashboard": {
+    "generated_at": "2026-10-10 18:04 UTC",
+    "source": "Olist Brazilian E-Commerce Public Dataset (CC BY-NC-SA 4.0)",
+    "currency": "BRL",
+    "orders": 98199,
+    "items": 112101,
+    "customers": 94983,
+    "total_revenue": 13494400.74,
+    "period_start": "2016-09-04",
+    "period_end": "2018-09-03",
+    "default_range": [
+      "2017-01",
+      "2018-08"
+    ],
+    "sentinels": {
+      "delivery_days": -1,
+      "delay_days": -999,
+      "review": 0
+    },
+    "file_mb": 4.18
+  },
+  "duration_seconds": 9.2
+}

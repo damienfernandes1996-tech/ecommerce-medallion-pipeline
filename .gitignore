@@ -1,0 +1,23 @@
+# Data layers are rebuilt by the pipeline (only the .gitkeep files are versioned)
+data/raw/*
+!data/raw/.gitkeep
+data/bronze/*
+!data/bronze/.gitkeep
+data/silver/*
+!data/silver/.gitkeep
+data/gold/*
+!data/gold/.gitkeep
+data/*.duckdb
+data/*.duckdb.wal
+
+# Full Gold export for Power BI (large) - the small KPI csv files in outputs/ ARE versioned
+outputs/powerbi/
+
+# Python / tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.part
+.DS_Store

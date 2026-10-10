@@ -1,0 +1,261 @@
+{
+  "summary": {
+    "passed": 41,
+    "warnings": 1,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "layer": "bronze",
+      "name": "row count orders",
+      "status": "pass",
+      "detail": "99,441 rows (official release: 99,441)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count order_items",
+      "status": "pass",
+      "detail": "112,650 rows (official release: 112,650)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count payments",
+      "status": "pass",
+      "detail": "103,886 rows (official release: 103,886)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count customers",
+      "status": "pass",
+      "detail": "99,441 rows (official release: 99,441)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count products",
+      "status": "pass",
+      "detail": "32,951 rows (official release: 32,951)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count sellers",
+      "status": "pass",
+      "detail": "3,095 rows (official release: 3,095)"
+    },
+    {
+      "layer": "bronze",
+      "name": "row count category_translation",
+      "status": "pass",
+      "detail": "71 rows (official release: 71)"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key orders(order_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key customers(customer_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key products(product_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key sellers(seller_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key reviews(order_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "unique key order_items(order_id, order_item_id)",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "not null orders.customer_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "not null orders.purchased_at",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "not null order_items.price",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "not null payments.payment_value",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key orders.customer_id -> customers.customer_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key order_items.order_id -> orders.order_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key order_items.product_id -> products.product_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key order_items.seller_id -> sellers.seller_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key payments.order_id -> orders.order_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "foreign key reviews.order_id -> orders.order_id",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "price >= 0",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "freight_value >= 0",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "review score between 1 and 5",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "delivered before purchase",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "status 'delivered' without delivery date",
+      "status": "warn",
+      "detail": "8 offending rows"
+    },
+    {
+      "layer": "silver",
+      "name": "reviews removed by de-duplication",
+      "status": "pass",
+      "detail": "559 rows (duplicate reviews per order / invalid scores)"
+    },
+    {
+      "layer": "silver",
+      "name": "orders bronze == silver",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "gold",
+      "name": "fact_orders rows == silver.orders rows",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "gold",
+      "name": "fact_order_items rows == silver.order_items rows",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "gold",
+      "name": "revenue silver.order_items == gold.fact_orders",
+      "status": "pass",
+      "detail": "13,591,643.70 vs 13,591,643.70"
+    },
+    {
+      "layer": "gold",
+      "name": "kpi_monthly revenue == kpi_overview",
+      "status": "pass",
+      "detail": "13,494,400.74 vs 13,494,400.74"
+    },
+    {
+      "layer": "gold",
+      "name": "kpi_state revenue == kpi_overview",
+      "status": "pass",
+      "detail": "13,494,400.74 vs 13,494,400.74"
+    },
+    {
+      "layer": "gold",
+      "name": "kpi_category revenue == kpi_overview",
+      "status": "pass",
+      "detail": "13,494,400.74 vs 13,494,400.74"
+    },
+    {
+      "layer": "gold",
+      "name": "kpi_payment revenue == kpi_overview",
+      "status": "pass",
+      "detail": "13,494,400.74 vs 13,494,400.74"
+    },
+    {
+      "layer": "gold",
+      "name": "kpi_monthly orders == kpi_overview",
+      "status": "pass",
+      "detail": "98,199.00 vs 98,199.00"
+    },
+    {
+      "layer": "gold",
+      "name": "dim_customers orders == valid orders",
+      "status": "pass",
+      "detail": "98,199.00 vs 98,199.00"
+    },
+    {
+      "layer": "gold",
+      "name": "unique key dim_customers",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "gold",
+      "name": "fact_order_items -> dim_products",
+      "status": "pass",
+      "detail": "0 offending rows"
+    },
+    {
+      "layer": "gold",
+      "name": "fact_orders -> dim_date",
+      "status": "pass",
+      "detail": "0 offending rows"
+    }
+  ]
+}

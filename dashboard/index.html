@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olist · Performance e-commerce</title>
+<meta name="description" content="Dashboard interactif construit sur la couche Gold d'un pipeline Bronze / Silver / Gold (données Olist, Brésil).">
+<style>
+/* ---- Design tokens (light, dark by OS setting or data-theme) ------------------------ */
+.viz-root {
+  color-scheme: light;
+  --plane: #f9f9f7;  --surface: #fcfcfb;
+  --ink: #0b0b0b;   --ink-2: #52514e;  --muted: #898781;
+  --grid: #e1e0d9;  --axis: #c3c2b7;   --border: rgba(11, 11, 11, .10);
+  --accent: #2a78d6; --dim: #c3c2b7;   --wash: rgba(11, 11, 11, .05); --focus: #2a78d6;
+  --o1: #86b6ef; --o2: #5598e7; --o3: #2a78d6; --o4: #1c5cab; --o5: #104281;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --plane: #0d0d0d;  --surface: #1a1a19;
+    --ink: #f0efec;   --ink-2: #c3c2b7;  --muted: #898781;
+    --grid: #2c2c2a;  --axis: #383835;   --border: rgba(255, 255, 255, .10);
+    --accent: #3987e5; --dim: #4a4946;   --wash: rgba(255, 255, 255, .06); --focus: #6da7ec;
+    --o1: #184f95; --o2: #256abf; --o3: #3987e5; --o4: #6da7ec; --o5: #9ec5f4;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --plane: #0d0d0d;  --surface: #1a1a19;
+  --ink: #f0efec;   --ink-2: #c3c2b7;  --muted: #898781;
+  --grid: #2c2c2a;  --axis: #383835;   --border: rgba(255, 255, 255, .10);
+  --accent: #3987e5; --dim: #4a4946;   --wash: rgba(255, 255, 255, .06); --focus: #6da7ec;
+  --o1: #184f95; --o2: #256abf; --o3: #3987e5; --o4: #6da7ec; --o5: #9ec5f4;
+}
+
+/* ---- Base ---------------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--plane); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
+h1 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 15px; font-weight: 600; margin: 0; }
+p { margin: 0; }
+.lead { color: var(--ink-2); margin-top: 4px; max-width: 70ch; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- Filters (one row above everything it scopes) ------------------------------------- */
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 18px 0 8px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > label, .field > .label { font-size: 12px; color: var(--ink-2); }
+select, .btn {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-height: 36px;
+}
+select { max-width: 200px; }
+.btn { cursor: pointer; }
+.btn:hover { background: var(--wash); }
+.btn[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn.small { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+.summary { color: var(--ink-2); margin: 4px 0 14px; min-height: 20px; }
+
+/* ---- Cards, KPI tiles ------------------------------------------------------------------ */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.hero { grid-column: span 2; }
+.k-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.k-value { font-size: 28px; font-weight: 650; letter-spacing: -.01em; margin-top: 2px; }
+.hero .k-value { font-size: clamp(48px, 7vw, 60px); line-height: 1.05; margin-top: 6px; }
+.k-sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.spark { margin-top: 10px; height: 32px; }
+.hero .spark { height: 44px; }
+.spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.wide { grid-column: 1 / -1; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.card-head .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; max-width: 100%; }
+.empty { color: var(--ink-2); padding: 40px 0; text-align: center; }
+
+/* ---- Chart marks (specs: thin marks, hairline solid grid, 2px surface ring) --------------- */
+.ax-text { font-size: 12px; fill: var(--ink-2); }
+.lbl { font-size: 13px; fill: var(--ink); }
+.lbl.sel { font-weight: 650; }
+.val { font-size: 12px; fill: var(--ink-2); }
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.axis-line { stroke: var(--axis); stroke-width: 1; }
+.line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.area { fill: var(--accent); fill-opacity: .10; stroke: none; }
+.dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.cross { stroke: var(--axis); stroke-width: 1; }
+.band { fill: var(--wash); }
+.row { cursor: default; }
+.row.click { cursor: pointer; }
+.row .hit { fill: transparent; stroke: none; }
+.row:hover .hit { fill: var(--wash); }
+.row:hover .bar { opacity: .85; }
+.row:focus-visible { outline: none; }
+.row:focus-visible .hit { fill: var(--wash); stroke: var(--focus); stroke-width: 2; }
+svg:focus-visible { outline: 2px solid var(--focus); }
+
+/* ---- Tooltip -------------------------------------------------------------------------------- */
+.tip {
+  position: fixed; z-index: 10; pointer-events: none; min-width: 170px; max-width: 260px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, .16);
+}
+.tip[hidden] { display: none; }
+.tip-title { font-size: 12px; color: var(--ink-2); }
+.tip-value { font-size: 18px; font-weight: 650; margin: 1px 0 6px; }
+.tip-row { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; color: var(--ink-2); }
+.tip-row b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---- Table view (accessible twin of every chart) ------------------------------------------- */
+.table-wrap { max-height: 340px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th, table.data td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data thead th { position: sticky; top: 0; background: var(--surface); color: var(--ink-2); font-weight: 600; }
+table.data td { font-variant-numeric: tabular-nums; }
+
+/* ---- Footer ----------------------------------------------------------------------------------- */
+details.defs { margin-top: 16px; color: var(--ink-2); }
+details.defs summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+details.defs dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 10px 0 0; }
+details.defs dt { font-weight: 600; color: var(--ink); }
+details.defs dd { margin: 0; }
+footer { margin-top: 18px; font-size: 12px; color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .hero { grid-column: 1 / -1; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  details.defs dl { grid-template-columns: 1fr; }
+}
+@media (forced-colors: active) {
+  .bar, .dot { fill: Highlight; }
+  .line { stroke: Highlight; }
+}
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap">
+  <header>
+    <h1>Performance e-commerce · Olist</h1>
+    <p class="lead">Dashboard branché sur la couche <strong>Gold</strong> d'un pipeline Bronze → Silver → Gold. Tous les indicateurs se recalculent selon les filtres ci-dessous.</p>
+  </header>
+
+  <section class="filters" aria-label="Filtres">
+    <div class="field">
+      <span class="label" id="lbl-period">Période</span>
+      <div class="seg" id="presets" role="group" aria-labelledby="lbl-period"></div>
+    </div>
+    <div class="field"><label for="f-m0">Du</label><select id="f-m0"></select></div>
+    <div class="field"><label for="f-m1">Au</label><select id="f-m1"></select></div>
+    <div class="field"><label for="f-state">État du client</label><select id="f-state"></select></div>
+    <div class="field"><label for="f-cat">Catégorie</label><select id="f-cat"></select></div>
+    <div class="field"><span class="label">&nbsp;</span><button class="btn" id="f-reset" type="button">Réinitialiser</button></div>
+  </section>
+  <p class="summary" id="summary" aria-live="polite"></p>
+
+  <section class="kpis" id="kpis" aria-label="Indicateurs clés"></section>
+
+  <section class="grid" aria-label="Graphiques">
+    <article class="card wide">
+      <div class="card-head">
+        <div><h2>Chiffre d'affaires mensuel</h2><p class="sub">Ventes de produits en R$, commandes valides</p></div>
+        <button class="btn small toggle" type="button" data-chart="monthly" aria-pressed="false">Voir en tableau</button>
+      </div>
+      <div class="chart" id="chart-monthly"></div>
+    </article>
+    <article class="card">
+      <div class="card-head">
+        <div><h2>Top 10 des catégories</h2><p class="sub">CA en R$ · clic sur une barre pour filtrer</p></div>
+        <button class="btn small toggle" type="button" data-chart="category" aria-pressed="false">Voir en tableau</button>
+      </div>
+      <div class="chart" id="chart-category"></div>
+    </article>
+    <article class="card">
+      <div class="card-head">
+        <div><h2>Top 10 des États</h2><p class="sub">CA en R$ · clic sur une barre pour filtrer</p></div>
+        <button class="btn small toggle" type="button" data-chart="state" aria-pressed="false">Voir en tableau</button>
+      </div>
+      <div class="chart" id="chart-state"></div>
+    </article>
+    <article class="card wide">
+      <div class="card-head">
+        <div><h2>Note moyenne selon le retard de livraison</h2><p class="sub">Note de 1 à 5, commandes livrées et notées · retard = jours après la date promise</p></div>
+        <button class="btn small toggle" type="button" data-chart="delay" aria-pressed="false">Voir en tableau</button>
+      </div>
+      <div class="chart" id="chart-delay"></div>
+    </article>
+  </section>
+
+  <details class="defs">
+    <summary>Définitions des indicateurs</summary>
+    <dl>
+      <dt>Commande valide</dt><dd>Commande contenant au moins un article et ni annulée ni indisponible. Tous les indicateurs portent sur ces commandes.</dd>
+      <dt>Chiffre d'affaires</dt><dd>Somme du prix des articles, hors frais de port, en réais brésiliens (R$).</dd>
+      <dt>Panier moyen</dt><dd>Chiffre d'affaires ÷ nombre de commandes.</dd>
+      <dt>Clients</dt><dd>Clients uniques (customer_unique_id). « Récurrents » : au moins deux commandes valides sur toute la période du jeu de données.</dd>
+      <dt>Délai de livraison</dt><dd>Jours entre l'achat et la livraison, commandes livrées uniquement.</dd>
+      <dt>Livraison en retard</dt><dd>Livrée après la date de livraison estimée (comparaison au jour près), sur les commandes livrées.</dd>
+      <dt>Note moyenne</dt><dd>Moyenne des avis clients (1 à 5), un avis par commande (le plus récent).</dd>
+      <dt>Catégorie, État</dt><dd>Avec un filtre de catégorie, le CA ne compte que les articles de cette catégorie et les indicateurs par commande portent sur les commandes qui la contiennent. L'État est celui du client.</dd>
+      <dt>Mois complets</dt><dd>Période par défaut : janv. 2017 – août 2018. Fin 2016 et sept.–oct. 2018 contiennent très peu de commandes (démarrage et arrêt des données) ; le préréglage « Tout » les inclut.</dd>
+    </dl>
+  </details>
+
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script src="data.js"></script>
+<script src="metrics.js"></script>
+<script>
+(function () {
+  'use strict';
+  const D = window.OLIST_DATA;
+  const MT = window.OlistMetrics;
+  const F = MT.fmt;
+  const ctx = MT.prepare(D);
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
+
+  const PRESETS = [['complete', 'Mois complets'], ['all', 'Tout'], ['y2017', '2017'], ['y2018', '2018'], ['last12', '12 derniers mois']];
+  const st = { m0: 0, m1: 0, state: -1, cat: -1, preset: 'complete', table: { monthly: false, category: false, state: false, delay: false } };
+  let view = null;
+
+  // ---- tiny DOM helpers (all text goes through textContent) -------------------------------------
+  function el(name, attrs, parent, text) {
+    const e = document.createElementNS(NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function h(tag, props, parent, text) {
+    const e = document.createElement(tag);
+    for (const k in props || {}) e.setAttribute(k, props[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // ---- tooltip ------------------------------------------------------------------------------------
+  const tip = $('tip');
+  function showTip(x, y, title, value, rows) {
+    tip.replaceChildren();
+    h('div', { class: 'tip-title' }, tip, title);
+    if (value) h('div', { class: 'tip-value' }, tip, value);
+    (rows || []).forEach(([k, v]) => {
+      const r = h('div', { class: 'tip-row' }, tip);
+      h('span', {}, r, k);
+      h('b', {}, r, v);
+    });
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    let left = x + 14, top = y + 14;
+    if (left + r.width > window.innerWidth - 8) left = x - r.width - 14;
+    if (top + r.height > window.innerHeight - 8) top = y - r.height - 14;
+    tip.style.left = Math.max(8, left) + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  }
+  function hideTip() { tip.hidden = true; }
+
+  // ---- sparkline ------------------------------------------------------------------------------------
+  function sparkline(box, values) {
+    box.replaceChildren();
+    const w = Math.max(80, box.clientWidth), hgt = box.clientHeight || 32;
+    const svg = el('svg', { viewBox: `0 0 ${w} ${hgt}`, width: w, height: hgt, 'aria-hidden': 'true' }, box);
+    const vals = values.slice(-12);
+    const real = vals.filter((v) => v != null);
+    if (real.length < 2) return;
+    const lo = Math.min(...real), hi = Math.max(...real);
+    const pad = 6, span = hi - lo || 1;
+    const X = (i) => pad + (w - 2 * pad) * (i / (vals.length - 1));
+    const Y = (v) => hi === lo ? hgt / 2 : hgt - pad - (hgt - 2 * pad) * ((v - lo) / span);
+    let d = '', pen = false, last = null;
+    vals.forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(v).toFixed(1);
+      pen = true; last = [X(i), Y(v)];
+    });
+    el('path', { d, class: 'line', style: 'stroke:var(--muted)' }, svg);
+    el('circle', { cx: last[0], cy: last[1], r: 4, class: 'dot' }, svg);
+  }
+
+  // ---- KPI tiles ------------------------------------------------------------------------------------
+  const TILES = [
+    { id: 'orders', label: 'Commandes', value: (t) => F.int(t.orders), sub: () => 'commandes valides', series: (m) => m.orders },
+    { id: 'aov', label: 'Panier moyen', value: (t) => F.money(t.aov), sub: () => 'CA ÷ commandes', series: (m) => m.aov },
+    { id: 'customers', label: 'Clients', value: (t) => F.int(t.customers), sub: (t) => F.pct(t.repeatRate) + ' ont commandé plusieurs fois', series: (m) => m.customers },
+    { id: 'delivery', label: 'Délai de livraison', value: (t) => F.days(t.avgDelivery), sub: () => 'de l\'achat à la livraison', series: (m) => m.avgDelivery },
+    { id: 'late', label: 'Livraisons en retard', value: (t) => F.pct(t.lateRate), sub: () => 'des commandes livrées', series: (m) => m.lateRate },
+    { id: 'review', label: 'Note moyenne', value: (t) => (t.avgReview == null ? '—' : F.score(t.avgReview) + ' / 5'), sub: () => 'avis clients', series: (m) => m.avgReview },
+  ];
+  function buildTiles() {
+    const box = $('kpis');
+    const make = (id, label, cls) => {
+      const a = h('article', { class: 'card ' + (cls || ''), id: 'tile-' + id }, box);
+      h('h2', { class: 'k-label' }, a, label);
+      h('p', { class: 'k-value', id: 'v-' + id }, a, '—');
+      h('p', { class: 'k-sub', id: 'sub-' + id }, a, '');
+      h('div', { class: 'spark', id: 'sp-' + id }, a);
+    };
+    make('revenue', 'Chiffre d\'affaires', 'hero');
+    TILES.forEach((t) => make(t.id, t.label));
+  }
+  function renderTiles() {
+    const t = view.t;
+    const series = view.mon.slice(st.m0, st.m1 + 1);
+    $('v-revenue').textContent = F.moneyCompact(t.orders ? t.revenue : null);
+    $('sub-revenue').textContent = t.orders ? F.money(t.revenue) + ' de ventes de produits, hors frais de port' : 'Aucune commande pour cette sélection';
+    sparkline($('sp-revenue'), series.map((m) => m.revenue));
+    TILES.forEach((tile) => {
+      $('v-' + tile.id).textContent = t.orders ? tile.value(t) : '—';
+      $('sub-' + tile.id).textContent = t.orders ? tile.sub(t) : '';
+      sparkline($('sp-' + tile.id), series.map(tile.series));
+    });
+  }
+
+  // ---- scales ---------------------------------------------------------------------------------------------
+  function niceScale(maxV) {
+    if (!(maxV > 0)) return { top: 1, ticks: [0, 1] };
+    // smallest "nice" step (1, 2, 2.5, 5 x 10^n) that needs at most 6 intervals
+    const mag = Math.pow(10, Math.floor(Math.log10(maxV / 6)));
+    const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((s) => Math.ceil(maxV / s) <= 6);
+    const top = Math.ceil(maxV / step) * step, ticks = [];
+    for (let v = 0; v <= top + step / 2; v += step) ticks.push(v);
+    return { top, ticks };
+  }
+
+  // ---- monthly revenue line chart --------------------------------------------------------------------------
+  function drawMonthly() {
+    const box = $('chart-monthly');
+    box.replaceChildren();
+    const pts = [];
+    for (let i = st.m0; i <= st.m1; i++) pts.push({ i, ...view.mon[i] });
+    if (!view.t.orders) { h('p', { class: 'empty' }, box, 'Aucune commande pour cette sélection.'); return; }
+    if (st.table.monthly) {
+      return box.appendChild(makeTable(
+        ['Mois', 'CA (R$)', 'Commandes', 'Panier moyen (R$)', 'Clients'],
+        pts.map((p) => [F.monthLong(p.month), F.int(p.revenue), F.int(p.orders), F.int(p.aov), F.int(p.customers)])));
+    }
+    const w = Math.max(280, box.clientWidth), hgt = 280;
+    const m = { l: 52, r: w < 520 ? 24 : 78, t: 24, b: 30 };
+    const pw = w - m.l - m.r, ph = hgt - m.t - m.b, n = pts.length;
+    const maxV = Math.max(...pts.map((p) => p.revenue || 0));
+    const sc = niceScale(maxV);
+    const X = (j) => m.l + (n === 1 ? pw / 2 : pw * (j / (n - 1)));
+    const Y = (v) => m.t + ph * (1 - v / sc.top);
+    const svg = el('svg', { viewBox: `0 0 ${w} ${hgt}`, width: w, height: hgt, tabindex: 0, role: 'img',
+      'aria-label': `Chiffre d'affaires mensuel de ${F.monthLong(pts[0].month)} à ${F.monthLong(pts[n - 1].month)}. Flèches gauche et droite pour parcourir les mois.` }, box);
+
+    sc.ticks.forEach((v) => {
+      el('line', { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), class: v === 0 ? 'axis-line' : 'grid-line' }, svg);
+      el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 'ax-text' }, svg, F.compact(v));
+    });
+    const stride = Math.max(1, Math.ceil(64 / (n === 1 ? 64 : pw / (n - 1))));
+    pts.forEach((p, j) => {
+      if (j % stride === 0) el('text', { x: X(j), y: hgt - 8, 'text-anchor': 'middle', class: 'ax-text' }, svg, F.monthShort(p.month));
+    });
+
+    // line + soft area, broken where a month has no sale
+    let segs = [], cur = [];
+    pts.forEach((p, j) => { if (p.revenue == null) { if (cur.length) segs.push(cur); cur = []; } else cur.push([X(j), Y(p.revenue)]); });
+    if (cur.length) segs.push(cur);
+    segs.forEach((s) => {
+      if (s.length > 1) {
+        const d = s.map((q, k) => (k ? 'L' : 'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1)).join('');
+        el('path', { d: d + `L${s[s.length - 1][0].toFixed(1)},${Y(0)}L${s[0][0].toFixed(1)},${Y(0)}Z`, class: 'area' }, svg);
+        el('path', { d, class: 'line' }, svg);
+      }
+    });
+    const lastJ = pts.map((p) => p.revenue != null).lastIndexOf(true);
+    if (lastJ >= 0) {
+      el('circle', { cx: X(lastJ), cy: Y(pts[lastJ].revenue), r: 5, class: 'dot' }, svg);
+      // end label: to the right of the last point when there is room, otherwise above it
+      const room = w >= 520 && lastJ === n - 1;
+      el('text', room
+        ? { x: X(lastJ) + 10, y: Y(pts[lastJ].revenue) + 4, 'text-anchor': 'start', class: 'ax-text', style: 'font-weight:600;fill:var(--ink)' }
+        : { x: X(lastJ), y: Y(pts[lastJ].revenue) - 12, 'text-anchor': lastJ > n / 2 ? 'end' : 'start', class: 'ax-text', style: 'font-weight:600;fill:var(--ink)' },
+      svg, F.moneyCompact(pts[lastJ].revenue));
+    }
+
+    // hover layer: crosshair snaps to the nearest month
+    const cross = el('line', { y1: m.t, y2: m.t + ph, class: 'cross', visibility: 'hidden' }, svg);
+    const hdot = el('circle', { r: 5, class: 'dot', visibility: 'hidden' }, svg);
+    const overlay = el('rect', { x: m.l - 12, y: m.t, width: pw + 24, height: ph + 8, fill: 'transparent' }, svg);
+    let cur_j = null;
+    function hover(j, cx, cy) {
+      cur_j = j;
+      const p = pts[j];
+      cross.setAttribute('x1', X(j)); cross.setAttribute('x2', X(j)); cross.setAttribute('visibility', 'visible');
+      if (p.revenue != null) { hdot.setAttribute('cx', X(j)); hdot.setAttribute('cy', Y(p.revenue)); hdot.setAttribute('visibility', 'visible'); }
+      else hdot.setAttribute('visibility', 'hidden');
+      const prev = view.mon[p.i - 1];
+      const growth = prev && prev.revenue && p.revenue != null ? p.revenue / prev.revenue - 1 : null;
+      showTip(cx, cy, F.monthLong(p.month), p.revenue != null ? F.money(p.revenue) : 'Aucune vente',
+        p.revenue != null ? [['Commandes', F.int(p.orders)], ['Panier moyen', F.money(p.aov)], ['Clients', F.int(p.customers)], ['vs mois précédent', growth == null ? '—' : F.signedPct(growth)]] : []);
+    }
+    function leave() { cur_j = null; cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); hideTip(); }
+    overlay.addEventListener('pointermove', (e) => {
+      const r = svg.getBoundingClientRect();
+      const j = n === 1 ? 0 : clamp(Math.round(((e.clientX - r.left) - m.l) / pw * (n - 1)), 0, n - 1);
+      hover(j, e.clientX, e.clientY);
+    });
+    overlay.addEventListener('pointerleave', leave);
+    svg.addEventListener('blur', leave);
+    svg.addEventListener('keydown', (e) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(e.key)) return;
+      e.preventDefault();
+      if (e.key === 'Escape') return leave();
+      let j = cur_j == null ? (e.key === 'ArrowLeft' ? n - 1 : 0) : cur_j + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0);
+      if (e.key === 'Home') j = 0;
+      if (e.key === 'End') j = n - 1;
+      j = clamp(j, 0, n - 1);
+      const r = svg.getBoundingClientRect();
+      hover(j, r.left + X(j), r.top + (pts[j].revenue != null ? Y(pts[j].revenue) : m.t + ph / 2));
+    });
+  }
+
+  // ---- horizontal bar chart (shared by categories, states, delay buckets) -----------------------------------
+  function drawBars(box, rows, o) {
+    box.replaceChildren();
+    if (!rows.length) { h('p', { class: 'empty' }, box, 'Aucune commande pour cette sélection.'); return; }
+    const w = Math.max(260, box.clientWidth);
+    const labelW = w < 420 ? 118 : 160, valueW = 64, rowH = 32, barH = 16, top = 4;
+    const hgt = rows.length * rowH + top * 2;
+    const bw = w - labelW - valueW - 8;
+    const max = o.max || Math.max(...rows.map((r) => r.value || 0)) || 1;
+    const svg = el('svg', { viewBox: `0 0 ${w} ${hgt}`, width: w, height: hgt, role: 'list', 'aria-label': o.aria }, box);
+    el('line', { x1: labelW, x2: labelW, y1: top, y2: hgt - top, class: 'axis-line' }, svg);
+    const maxChars = Math.floor((labelW - 10) / 6.6);
+    const hasSel = o.selectedKey != null && o.selectedKey !== -1;
+    rows.forEach((r, i) => {
+      const y = top + i * rowH, cy = y + rowH / 2;
+      const selected = hasSel && r.key === o.selectedKey;
+      const g = el('g', { class: 'row' + (o.onClick ? ' click' : ''), role: o.onClick ? 'button' : 'listitem', tabindex: 0,
+        'aria-label': r.aria, 'aria-pressed': o.onClick ? String(selected) : null }, svg);
+      if (!o.onClick) g.removeAttribute('aria-pressed');
+      el('rect', { x: 0, y, width: w, height: rowH, class: 'hit' }, g);
+      const text = r.label.length > maxChars ? r.label.slice(0, maxChars - 1) + '…' : r.label;
+      el('text', { x: 0, y: cy + 4.5, class: 'lbl' + (selected ? ' sel' : '') }, g, text);
+      if (r.value != null) {
+        const len = Math.max(3, bw * (r.value / max));
+        const fill = hasSel && !selected ? 'var(--dim)' : (o.colorFor ? o.colorFor(r, i) : 'var(--accent)');
+        const y0 = cy - barH / 2, rr = Math.min(4, len / 2);
+        const d = `M${labelW},${y0}h${len - rr}a${rr},${rr} 0 0 1 ${rr},${rr}v${barH - 2 * rr}a${rr},${rr} 0 0 1 ${-rr},${rr}h${-(len - rr)}z`;
+        const bar = el('path', { d, class: 'bar' }, g);
+        bar.style.fill = fill;
+        el('text', { x: labelW + len + 8, y: cy + 4.5, class: 'val' }, g, r.valueLabel);
+      } else {
+        el('text', { x: labelW + 8, y: cy + 4.5, class: 'val' }, g, '—');
+      }
+      const show = (cx, cyy) => showTip(cx, cyy, r.tipTitle, r.tipValue, r.tipRows);
+      g.addEventListener('pointermove', (e) => show(e.clientX, e.clientY));
+      g.addEventListener('pointerleave', hideTip);
+      g.addEventListener('focus', () => { const b = g.getBoundingClientRect(); show(b.left + b.width / 2, b.top + b.height / 2); });
+      g.addEventListener('blur', hideTip);
+      if (o.onClick) {
+        g.addEventListener('click', () => { hideTip(); o.onClick(r); });
+        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hideTip(); o.onClick(r); } });
+      }
+    });
+  }
+
+  function makeTable(headers, rows) {
+    const wrap = h('div', { class: 'table-wrap' });
+    const t = h('table', { class: 'data' }, wrap);
+    const tr = h('tr', {}, h('thead', {}, t));
+    headers.forEach((x) => h('th', { scope: 'col' }, tr, x));
+    const body = h('tbody', {}, t);
+    rows.forEach((r) => { const row = h('tr', {}, body); r.forEach((c) => h('td', {}, row, c)); });
+    return wrap;
+  }
+
+  // ---- the three bar charts ----------------------------------------------------------------------------------
+  function drawCategories() {
+    const box = $('chart-category');
+    const all = view.cats, total = all.reduce((s, r) => s + r.revenue, 0);
+    if (st.table.category) {
+      box.replaceChildren(makeTable(['Catégorie', 'CA (R$)', 'Part du CA', 'Commandes', 'Articles'],
+        all.map((r) => [F.category(r.name), F.int(r.revenue), F.pct(r.revenue / total), F.int(r.orders), F.int(r.items)])));
+      return;
+    }
+    let top = all.slice(0, 10);
+    if (st.cat >= 0 && !top.some((r) => r.index === st.cat)) { const s = all.find((r) => r.index === st.cat); if (s) top.push(s); }
+    drawBars(box, top.map((r) => ({
+      key: r.index, label: F.category(r.name), value: r.revenue, valueLabel: F.compact(r.revenue),
+      aria: `${F.category(r.name)} : ${F.money(r.revenue)}`,
+      tipTitle: F.category(r.name), tipValue: F.money(r.revenue),
+      tipRows: [['Part du CA', F.pct(r.revenue / total)], ['Commandes', F.int(r.orders)], ['Articles vendus', F.int(r.items)]], raw: r,
+    })), {
+      aria: 'Top 10 des catégories par chiffre d\'affaires', selectedKey: st.cat,
+      onClick: (r) => { st.cat = st.cat === r.key ? -1 : r.key; sync(); render(); },
+    });
+  }
+  function drawStates() {
+    const box = $('chart-state');
+    const all = view.states, total = all.reduce((s, r) => s + r.revenue, 0);
+    if (st.table.state) {
+      box.replaceChildren(makeTable(['État', 'CA (R$)', 'Part du CA', 'Commandes', 'Délai (j)', 'Retards', 'Note'],
+        all.map((r) => [`${r.name} (${r.code})`, F.int(r.revenue), F.pct(r.revenue / total), F.int(r.orders), F.days(r.avgDelivery), F.pct(r.lateRate), F.score(r.avgReview)])));
+      return;
+    }
+    let top = all.slice(0, 10);
+    if (st.state >= 0 && !top.some((r) => r.index === st.state)) { const s = all.find((r) => r.index === st.state); if (s) top.push(s); }
+    drawBars(box, top.map((r) => ({
+      key: r.index, label: `${r.code} · ${r.name}`, value: r.revenue, valueLabel: F.compact(r.revenue),
+      aria: `${r.name} : ${F.money(r.revenue)}`,
+      tipTitle: `${r.name} (${r.code})`, tipValue: F.money(r.revenue),
+      tipRows: [['Part du CA', F.pct(r.revenue / total)], ['Commandes', F.int(r.orders)], ['Délai de livraison', F.days(r.avgDelivery)], ['Livraisons en retard', F.pct(r.lateRate)], ['Note moyenne', F.score(r.avgReview)]],
+    })), {
+      aria: 'Top 10 des États par chiffre d\'affaires', selectedKey: st.state,
+      onClick: (r) => { st.state = st.state === r.key ? -1 : r.key; sync(); render(); },
+    });
+  }
+  function drawDelay() {
+    const box = $('chart-delay');
+    const b = view.buckets;
+    if (st.table.delay) {
+      box.replaceChildren(makeTable(['Retard de livraison', 'Commandes notées', 'Note moyenne', 'Notes de 1 ou 2'],
+        b.map((r) => [r.label, F.int(r.orders), F.score(r.avgReview), F.pct(r.lowShare)])));
+      return;
+    }
+    drawBars(box, b.map((r) => ({
+      key: r.key, label: r.label, value: r.avgReview, valueLabel: F.score(r.avgReview),
+      aria: `${r.label} : note moyenne ${F.score(r.avgReview)} sur 5`,
+      tipTitle: r.label, tipValue: r.avgReview == null ? 'Aucune commande' : F.score(r.avgReview) + ' / 5',
+      tipRows: [['Commandes notées', F.int(r.orders)], ['Notes de 1 ou 2', F.pct(r.lowShare)]],
+    })), { aria: 'Note moyenne selon le retard de livraison', max: 5, colorFor: (r, i) => `var(--o${i + 1})` });
+  }
+
+  // ---- controls ------------------------------------------------------------------------------------------------
+  function buildControls() {
+    const seg = $('presets');
+    PRESETS.forEach(([key, label]) => {
+      const b = h('button', { type: 'button', class: 'btn', 'data-preset': key, 'aria-pressed': 'false' }, seg, label);
+      b.addEventListener('click', () => { const [a, z] = MT.presetRange(key, D); st.m0 = a; st.m1 = z; st.preset = key; sync(); render(); });
+    });
+    const opt = (sel, value, label) => h('option', { value: String(value) }, sel, label);
+    D.months.forEach((m, i) => { opt($('f-m0'), i, F.monthLong(m)); opt($('f-m1'), i, F.monthLong(m)); });
+    opt($('f-state'), -1, 'Tous les États');
+    D.states.forEach((s, i) => opt($('f-state'), i, `${s.name} (${s.code})`));
+    opt($('f-cat'), -1, 'Toutes les catégories');
+    D.categories.map((c, i) => [F.category(c), i]).sort((a, b) => a[0].localeCompare(b[0], 'fr')).forEach(([label, i]) => opt($('f-cat'), i, label));
+
+    $('f-m0').addEventListener('change', (e) => { st.m0 = +e.target.value; if (st.m0 > st.m1) st.m1 = st.m0; st.preset = null; sync(); render(); });
+    $('f-m1').addEventListener('change', (e) => { st.m1 = +e.target.value; if (st.m1 < st.m0) st.m0 = st.m1; st.preset = null; sync(); render(); });
+    $('f-state').addEventListener('change', (e) => { st.state = +e.target.value; sync(); render(); });
+    $('f-cat').addEventListener('change', (e) => { st.cat = +e.target.value; sync(); render(); });
+    $('f-reset').addEventListener('click', () => { reset(); sync(); render(); });
+    document.querySelectorAll('.toggle').forEach((b) => b.addEventListener('click', () => {
+      const k = b.dataset.chart;
+      st.table[k] = !st.table[k];
+      b.setAttribute('aria-pressed', String(st.table[k]));
+      b.textContent = st.table[k] ? 'Voir le graphique' : 'Voir en tableau';
+      hideTip(); drawAll();
+    }));
+  }
+  function reset() { const [a, z] = MT.presetRange('complete', D); st.m0 = a; st.m1 = z; st.state = -1; st.cat = -1; st.preset = 'complete'; }
+  function sync() {
+    $('f-m0').value = String(st.m0); $('f-m1').value = String(st.m1);
+    $('f-state').value = String(st.state); $('f-cat').value = String(st.cat);
+    document.querySelectorAll('#presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === st.preset)));
+  }
+
+  // ---- compute + draw -----------------------------------------------------------------------------------------
+  function drawAll() {
+    if (!view) return;
+    drawMonthly(); drawCategories(); drawStates(); drawDelay();
+  }
+  function render() {
+    const f = { m0: st.m0, m1: st.m1, state: st.state, cat: st.cat };
+    const sAll = MT.select(ctx, f);
+    view = {
+      t: MT.totals(ctx, sAll),
+      mon: MT.monthly(ctx, MT.select(ctx, f, { month: true })),
+      cats: MT.byCategory(ctx, MT.select(ctx, f, { cat: true })),
+      states: MT.byState(ctx, MT.select(ctx, f, { state: true })),
+      buckets: MT.delayBuckets(ctx, sAll),
+    };
+    const stateLabel = st.state < 0 ? 'tous les États' : D.states[st.state].name;
+    const catLabel = st.cat < 0 ? 'toutes les catégories' : F.category(D.categories[st.cat]);
+    $('summary').textContent = `${F.monthLong(D.months[st.m0])} – ${F.monthLong(D.months[st.m1])} · ${stateLabel} · ${catLabel} · ${F.int(view.t.orders)} commandes`;
+    renderTiles();
+    drawAll();
+  }
+
+  // ---- start ----------------------------------------------------------------------------------------------------
+  buildTiles();
+  buildControls();
+  reset();
+  sync();
+  render();
+  $('foot').textContent = `Source des données : ${D.meta.source}. Période des commandes : ${D.meta.period_start} → ${D.meta.period_end}. Export Gold généré le ${D.meta.generated_at}.`;
+
+  let raf = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { renderTiles(); drawAll(); }); }).observe(document.querySelector('.wrap'));
+})();
+</script>
+</body>
+</html>
