@@ -2,7 +2,7 @@
 
 Pipeline de données de bout en bout sur **100 000 commandes e-commerce réelles** (Olist, Brésil, 2016-2018) : ingestion brute, nettoyage, modèle en étoile, KPI métier, puis **dashboard interactif** branché sur la couche Gold.
 
-> **Démo en ligne** : https://damienfernandes1996-tech.github.io/ecommerce-medallion-pipeline/ *(disponible après activation de GitHub Pages, voir [Publier le dashboard](#publier-le-dashboard))*
+> **Démo en ligne** : https://damienfernandes1996-tech.github.io/ecommerce-medallion-pipeline/
 
 ![Dashboard](docs/img/dashboard-light.png)
 
